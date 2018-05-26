@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta content="IE=edge,chrome=1" http-equiv="X-UA-Compatible" />
+  <title>Neural Monkey Demos</title>
+  <meta content="width=device-width" name="viewport" />
+  <meta content="Language Resources, Infrastructure, Research, Natural Language Processing, Multimedia, Czech language, Computational           Linguistics, Speech, Text, Corpus, Corpora" name="keywords" />
+  <meta content="LINDAT CLARIN Research Infrastructure" name="description" />
+
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.2/jquery.min.js" type="text/javascript"> </script>
+  <script src="http://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+    <script src="http://jcrop-cdn.tapmodo.com/v0.9.12/js/jquery.Jcrop.min.js"></script>
+
+    <link rel="stylesheet" href="http://jcrop-cdn.tapmodo.com/v0.9.12/css/jquery.Jcrop.css" type="text/css" />
+
+  <link rel="stylesheet" href="https://lindat.mff.cuni.cz/common/public/css/lindat.css" type="text/css" />
+  <link rel="stylesheet" href="https://lindat.mff.cuni.cz/templates/lindat/bootstrap/css/bootstrap.min.css" type="text/css" />
+  <link rel="stylesheet" href="https://lindat.mff.cuni.cz/templates/lindat/bootstrap/css/ufal-theme.css" type="text/css" />
+
+  <script type="text/javascript">
+
+var jcrop_api;
+$(function () {
+    //document.domain = "cuni.cz";
+
+    $('#header').load("https://lindat.mff.cuni.cz/common/header-services-standalone.htm");
+    $('#footer').load("https://lindat.mff.cuni.cz/common/footer-services-standalone.htm");
+
+    jcrop_api = $.Jcrop('#captioningImg');
+
+    $('#sentimentEnSubmit').click(function(){
+        var text = $("#sentimentEnText").val();
+        if (!text) {
+            alert('Please enter some text.');
+            return;
+        }
+
+        var url = 'sentiment_en';
+        var formData = new FormData();
+        formData.append("text", text);
+
+        $.ajax({
+            url: url,
+            type: 'POST',
+            success: function(data) { showSentimentEn(data); },
+            error: function(jqXHR, textStatus, errorThrown) {
+                alert("An error during communication with the server.");
+            },
+
+            // Form data
+            data: formData,
+
+            //Options to tell jQuery not to process data or worry about content-type.
+            cache: false,
+            contentType: false,
+            processData: false
+        });
+    });
+
+    $('#sentimentCsSubmit').click(function(){
+        var text = $("#sentimentCsText").val();
+        if (!text) {
+            alert('Please enter some text.');
+            return;
+        }
+
+        var url = 'sentiment_cs';
+        var formData = new FormData();
+        formData.append("text", text);
+
+        $.ajax({
+            url: url,
+            type: 'POST',
+            success: function(data) { showSentimentCs(data); },
+            error: function(jqXHR, textStatus, errorThrown) {
+                alert("An error during communication with the server.");
+            },
+
+            // Form data
+            data: formData,
+
+            //Options to tell jQuery not to process data or worry about content-type.
+            cache: false,
+            contentType: false,
+            processData: false
+        });
+    });
+
+
+    $("#imgFile").change(function(){
+        if (this.files && this.files[0]) {
+            var reader = new FileReader();
+            reader.onload = function (e) {
+                $('#captioningImg').attr('src', e.target.result);
+                jcrop_api.setImage(e.target.result);
+            }
+            reader.readAsDataURL(this.files[0]);
+        }
+    });
+
+    $("#captioningImg").load(function() {
+        var orig_w = $('#captioningImg').prop('naturalWidth');
+        var orig_h = $('#captioningImg').prop('naturalHeight');
+
+        var ratio = Math.max(1, orig_w / 640, orig_h / 480);
+        var new_w = Math.round(orig_w / ratio);
+        var new_h = Math.round(orig_h / ratio);
+
+        $('#captioningImg').attr('width', new_w);
+        $('#captioningImg').attr('height', new_h);
+
+        var shorter_side = Math.min(new_w, new_h);
+        var default_select = [
+            (new_w - shorter_side) / 2, (new_h - shorter_side) / 2,
+            (new_w + shorter_side) / 2, (new_h + shorter_side) / 2]
+
+        jcrop_api.setOptions({
+            aspectRatio: 1,
+            setSelect: default_select,
+            bgOpacity : .2,
+            trueSize: [new_w, new_h],
+            boxWidth: new_w,
+            boxHeight: new_h,
+            onRelease: function() {
+                this.setOptions({ setSelect: default_select }); },
+            allowMove: true,
+        })
+        jcrop_api.setSelect(default_select);
+        jcrop_api.animateTo(default_select);
+    });
+
+    $("#captioningSubmit").click(function(){
+        var orig_w = $('#captioningImg').prop('naturalWidth');
+        var orig_h = $('#captioningImg').prop('naturalHeight');
+        var canvas = document.createElement('canvas');
+        canvas.width = orig_w;
+        canvas.height = orig_h;
+        var selected = jcrop_api.tellSelect();
+        var img = document.getElementById('captioningImg');
+        canvas.getContext('2d').drawImage(img, 0, 0, orig_w, orig_h);
+        var img_data = canvas.getContext('2d').getImageData(
+            selected.x, selected.y, selected.w, selected.h);
+
+        var url = 'captioning';
+        var formData = new FormData();
+        formData.append("img_data", img_data.data);
+        formData.append("img_w", selected.w);
+        formData.append("img_h", selected.h);
+        formData.append("lng",
+            $("input[name='captionLng']:checked").val());
+
+        $.ajax({
+            url: url,
+            type: 'POST',
+            success: function(data) { showCaption(data); },
+            error: function(jqXHR, textStatus, errorThrown) {
+                alert("An error during communication with the server.");
+            },
+
+            // Form data
+            data: formData,
+
+            //Options to tell jQuery not to process data or worry about content-type.
+            cache: false,
+            contentType: false,
+            processData: false
+        });
+        $("#captioningResultBox").text("...");
+    });
+});
+
+function showSentimentEn(data) {
+    var n_stars = data["stars"];
+    var stars_str = "";
+    for (var i = 0; i < n_stars; i++) {
+        stars_str += "★";
+    }
+    for (var i = n_stars; i < 5; i++) {
+        stars_str += "☆";
+    }
+    $("#sentimentEnResult").text(stars_str);
+}
+
+function showSentimentCs(data) {
+    var sentiment = data["sentiment"];
+    $("#sentimentCsNegative").css('color', '#EEE');
+    $("#sentimentCsNeutral").css('color', '#EEE');
+    $("#sentimentCsPositive").css('color', '#EEE');
+
+    if (sentiment == "negative") {
+        $("#sentimentCsNegative").css('color', 'red');
+    }
+    if (sentiment == "neutral") {
+        $("#sentimentCsNeutral").css('color', 'blue');
+    }
+    if (sentiment == "positive") {
+        $("#sentimentCsPositive").css('color', 'green');
+    }
+}
+
+function showCaption(data) {
+    var caption = data["caption"];
+    $("#captioningResultBox").text(caption);
+}
+
+    </script>
+
+    <style>
+.boxTitle {
+    font-size: 14pt;
+    font-weight: bold;
+    margin-top: 10px;
+    padding: 5px;
+    background-color: #EEE;
+    border: 1px #CCC solid;
+    cursor: pointer;
+}
+
+.boxContent {
+    border: 1px #CCC solid;
+    border-top: 0px;
+    padding: 5px;
+}
+    </style>
+
+</head>
+
+<body id="lindat-services">
+
+<div id="header"></div>
+
+<div class="lindat-common">
+<div class="container" style="margin-left:70px;margin-right:70px">
+
+    <h1>Models for End-to-End NLP Tasks</h1>
+
+    <p>In many natural language processing tasks, deep learning allowed
+    replacing pipelines of rule-based and machine learning step by monolitical
+    models trained end-to-end. The input of the model are directly words or
+    characters wihtout any further pre-processing.</p>
+
+    <p>This demo shows several tasks where deep neural network recently became
+    a dominant approach. In particular thery are machine translation, sentiment
+    analysis, image captioning and text summarization.</p>
+
+    <p>The model were trained using <a
+        href="https://github.com/ufal/neuralmonkey">Neural Monkey</a>, an
+        open-source toolkit for sequential learning that is developed at <a
+            href="http://ufal.mff.cuni.cz/">Institute of Formal and Applied
+            Linguistic at Charles University</a>. On top of this demo, the
+            models are available for download. They should serve both
+            educational purposes and be used for studying the language
+            representation that emerges in deep neural networks.</p>
+
+        <div class="boxTitle" data-toggle="collapse" data-target="#translationBox">
+            English-to-Czech Machine Translation
+        </div>
+
+        <div class="boxContent collapse" id="translationBox">
+            <fieldset style="background:#EEE;padding:10px">
+                <textarea style="margin-bottom: 30px; width:100%;height: 150px;" id="sentimentEnText" placeholder="Enter text in English."></textarea>
+
+                <input type="button" class="btn btn-primary" id="sentimentEnSubmit" value="Translate" />
+            </fieldset>
+
+            <div id="translationResultBox" style="background:#ffffe0;padding:10px;margin:3px;text-align:center;font-size:20pt">
+                </div>
+
+        </div>
+
+        <div class="boxTitle" data-toggle="collapse" data-target="#sentimentEnBox">
+            Sentiment Analysis in English
+        </div>
+
+        <div class="boxContent collapse" id="sentimentEnBox">
+            <fieldset style="background:#EEE;padding:10px">
+                <textarea style="margin-bottom: 30px; width:100%;height: 150px;" id="sentimentEnText" placeholder="Write you review..."></textarea>
+
+                <input type="button" class="btn btn-primary" id="sentimentEnSubmit" value="Evaluate sentiment" />
+            </fieldset>
+
+            <div id="sentimentEnResultBox" style="background:#ffffe0;padding:10px;margin:3px;text-align:center">
+                <span id="sentimentEnResult" style="font-size:30pt;color:DarkOrange">☆☆☆☆☆</span>
+            </div>
+       </div>
+
+        <div class="boxTitle" data-toggle="collapse" data-target="#sentimentCsBox">
+            Sentiment Analysis in Czech
+        </div>
+
+        <div class="boxContent collapse" id="sentimentCsBox">
+            <fieldset style="background:#EEE;padding:10px">
+                <textarea style="margin-bottom: 30px; width:100%;height: 150px;" id="sentimentCsText" placeholder="Write you review..."></textarea>
+
+                <input type="button" class="btn btn-primary" id="sentimentCsSubmit" value="Evaluate sentiment" />
+            </fieldset>
+
+            <div id="sentimentEnResultBox" style="background:#ffffe0;padding:10px;margin:3px;text-align:center;font-size:40pt;color:#EEE">
+                <span id="sentimentCsNegative">🙁</span> <span id="sentimentCsNeutral">😐</span> <span id="sentimentCsPositive">🙂</span>
+            </div>
+       </div>
+
+        <div class="boxTitle" data-toggle="collapse" data-target="#captioningEnBox">
+            Image Captioning
+        </div>
+        <div class="boxContent collapse" id="captioningEnBox" style="text-align:center">
+            <div style="background:#EEE;padding:10px,text-align:center">
+                1. Select an image.
+                <p align="center"><input type='file' id="imgFile" /></p>
+                2. Select a rectangle you want caption.
+                <p align="center">
+                <img src="" width="10" height="10" id="captioningImg" style="margin:20px;text-align=center" align="center"/></p>
+
+                3. Choose the language of the caption.
+                <div style="margin:20px">
+                    <input type="radio" name="captionLng" value="en" checked />
+                    <label>English</label>
+
+                    <!--<input type="radio" name="captionLng" value="de" />
+                    <label>German</label>-->
+
+                    <input type="radio" name="captionLng" value="cs" />
+                    <label>Czech</label>
+
+                </div>
+
+                <input type="button" class="btn btn-primary" id="captioningSubmit" value="Generate Caption" />
+            </div>
+            <div id="captioningResultBox" style="background:#ffffe0;padding:10px;margin:3px;text-align:center;font-size:20pt">
+                </div>
+        </div>
+
+        <div class="boxTitle" data-toggle="collapse" data-target="#summarizationEn">
+            English Text Summarization
+        </div>
+
+<p>This work has been supported by the grant 18-02196S of the Czech Science Foundation.</p>
+
+</div>
+
+<div id="footer"></div>
+
+</body>
+</html>
