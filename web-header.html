@@ -10,7 +10,7 @@
 
   <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.2/jquery.min.js" type="text/javascript"> </script>
   <script src="http://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
-    <script src="http://jcrop-cdn.tapmodo.com/v0.9.12/js/jquery.Jcrop.min.js"></script>
+  <script src="http://jcrop-cdn.tapmodo.com/v0.9.12/js/jquery.Jcrop.min.js"></script>
 
     <link rel="stylesheet" href="http://jcrop-cdn.tapmodo.com/v0.9.12/css/jquery.Jcrop.css" type="text/css" />
 
@@ -27,7 +27,38 @@ $(function () {
     $('#header').load("https://lindat.mff.cuni.cz/common/header-services-standalone.htm");
     $('#footer').load("https://lindat.mff.cuni.cz/common/footer-services-standalone.htm");
 
-    jcrop_api = $.Jcrop('#captioningImg');
+    if($("#captioningImg").length){
+        jcrop_api = $.Jcrop('#captioningImg');
+    }
+
+    $('#translationEnCsSubmit').click(function(){
+        var text = $("#translationEnCsText").val();
+        if (!text) {
+            alert('Please enter some text.');
+            return;
+        }
+
+        var url = 'translation_encs';
+        var formData = new FormData();
+        formData.append("text", text);
+
+        $.ajax({
+            url: url,
+            type: 'POST',
+            success: function(data) { showTranslationEnCs(data); },
+            error: function(jqXHR, textStatus, errorThrown) {
+                alert("An error during communication with the server.");
+            },
+
+            // Form data
+            data: formData,
+
+            //Options to tell jQuery not to process data or worry about content-type.
+            cache: false,
+            contentType: false,
+            processData: false
+        });
+    });
 
     $('#sentimentEnSubmit').click(function(){
         var text = $("#sentimentEnText").val();
@@ -199,6 +230,11 @@ function showSentimentCs(data) {
     }
 }
 
+function showTranslationEnCs(data) {
+    var target = data["target"];
+    $("#translationEnCsResultBox").text(target);
+}
+
 function showCaption(data) {
     var caption = data["caption"];
     $("#captioningResultBox").text(caption);
@@ -233,113 +269,21 @@ function showCaption(data) {
 <div class="lindat-common">
 <div class="container" style="margin-left:70px;margin-right:70px">
 
-    <h1>Models for End-to-End NLP Tasks</h1>
+<h1>Models for End-to-End NLP Tasks</h1>
 
-    <p>In many natural language processing tasks, deep learning allowed
-    replacing pipelines of rule-based and machine learning step by monolitical
-    models trained end-to-end. The input of the model are directly words or
-    characters wihtout any further pre-processing.</p>
+<p>In many natural language processing tasks, deep learning allowed
+replacing pipelines of rule-based and machine learning step by models
+trained end-to-end. The inputs of the models are directly words or
+characters without any further pre-processing. This demo shows several
+tasks where deep neural networks recently became a dominant approach. In
+particular, they are machine translation, sentiment analysis and automatic
+image captioning.</p>
 
-    <p>This demo shows several tasks where deep neural network recently became
-    a dominant approach. In particular thery are machine translation, sentiment
-    analysis, image captioning and text summarization.</p>
+<p> The model were trained using <a
+    href="https://github.com/ufal/neuralmonkey">Neural Monkey</a>, an
+    open-source toolkit for sequential learning that is developed at <a
+        href="http://ufal.mff.cuni.cz/">Institute of Formal and Applied
+        Linguistics at Charles University</a>. For more details about the
+    models see our paper <a href="https://ufal.mff.cuni.cz/~rosa/2018/docs/ITAT_2018_paper_14_1.pdf">Solving Three Czech NLP Tasks End-to-End with Neural
+        Models</a>. </p>
 
-    <p>The model were trained using <a
-        href="https://github.com/ufal/neuralmonkey">Neural Monkey</a>, an
-        open-source toolkit for sequential learning that is developed at <a
-            href="http://ufal.mff.cuni.cz/">Institute of Formal and Applied
-            Linguistic at Charles University</a>. On top of this demo, the
-            models are available for download. They should serve both
-            educational purposes and be used for studying the language
-            representation that emerges in deep neural networks.</p>
-
-        <div class="boxTitle" data-toggle="collapse" data-target="#translationBox">
-            English-to-Czech Machine Translation
-        </div>
-
-        <div class="boxContent collapse" id="translationBox">
-            <fieldset style="background:#EEE;padding:10px">
-                <textarea style="margin-bottom: 30px; width:100%;height: 150px;" id="sentimentEnText" placeholder="Enter text in English."></textarea>
-
-                <input type="button" class="btn btn-primary" id="sentimentEnSubmit" value="Translate" />
-            </fieldset>
-
-            <div id="translationResultBox" style="background:#ffffe0;padding:10px;margin:3px;text-align:center;font-size:20pt">
-                </div>
-
-        </div>
-
-        <div class="boxTitle" data-toggle="collapse" data-target="#sentimentEnBox">
-            Sentiment Analysis in English
-        </div>
-
-        <div class="boxContent collapse" id="sentimentEnBox">
-            <fieldset style="background:#EEE;padding:10px">
-                <textarea style="margin-bottom: 30px; width:100%;height: 150px;" id="sentimentEnText" placeholder="Write you review..."></textarea>
-
-                <input type="button" class="btn btn-primary" id="sentimentEnSubmit" value="Evaluate sentiment" />
-            </fieldset>
-
-            <div id="sentimentEnResultBox" style="background:#ffffe0;padding:10px;margin:3px;text-align:center">
-                <span id="sentimentEnResult" style="font-size:30pt;color:DarkOrange">☆☆☆☆☆</span>
-            </div>
-       </div>
-
-        <div class="boxTitle" data-toggle="collapse" data-target="#sentimentCsBox">
-            Sentiment Analysis in Czech
-        </div>
-
-        <div class="boxContent collapse" id="sentimentCsBox">
-            <fieldset style="background:#EEE;padding:10px">
-                <textarea style="margin-bottom: 30px; width:100%;height: 150px;" id="sentimentCsText" placeholder="Write you review..."></textarea>
-
-                <input type="button" class="btn btn-primary" id="sentimentCsSubmit" value="Evaluate sentiment" />
-            </fieldset>
-
-            <div id="sentimentEnResultBox" style="background:#ffffe0;padding:10px;margin:3px;text-align:center;font-size:40pt;color:#EEE">
-                <span id="sentimentCsNegative">🙁</span> <span id="sentimentCsNeutral">😐</span> <span id="sentimentCsPositive">🙂</span>
-            </div>
-       </div>
-
-        <div class="boxTitle" data-toggle="collapse" data-target="#captioningEnBox">
-            Image Captioning
-        </div>
-        <div class="boxContent collapse" id="captioningEnBox" style="text-align:center">
-            <div style="background:#EEE;padding:10px,text-align:center">
-                1. Select an image.
-                <p align="center"><input type='file' id="imgFile" /></p>
-                2. Select a rectangle you want caption.
-                <p align="center">
-                <img src="" width="10" height="10" id="captioningImg" style="margin:20px;text-align=center" align="center"/></p>
-
-                3. Choose the language of the caption.
-                <div style="margin:20px">
-                    <input type="radio" name="captionLng" value="en" checked />
-                    <label>English</label>
-
-                    <!--<input type="radio" name="captionLng" value="de" />
-                    <label>German</label>-->
-
-                    <input type="radio" name="captionLng" value="cs" />
-                    <label>Czech</label>
-
-                </div>
-
-                <input type="button" class="btn btn-primary" id="captioningSubmit" value="Generate Caption" />
-            </div>
-            <div id="captioningResultBox" style="background:#ffffe0;padding:10px;margin:3px;text-align:center;font-size:20pt">
-                </div>
-        </div>
-
-        <div class="boxTitle" data-toggle="collapse" data-target="#summarizationEn">
-            English Text Summarization
-        </div>
-
-<p>This work has been supported by the grant 18-02196S of the Czech Science Foundation.</p>
-
-</div>
-
-<div id="footer"></div>
-
-</body>
-</html>

@@ -43,9 +43,33 @@ def get_file(file_name):
         return str(exc)
 
 
+def service_runs(address):
+    if address is None:
+        return False
+
+    try:
+        monkey_response = requests.get("http://" + address)
+        return monkey_response.status_code == 200
+    except requests.exceptions.ConnectionError:
+        return False
+
+
 @APP.route('/web', methods=['GET'])
 def show_web():
-    content = get_file("web.html")
+    web_files = ["web-header.html"]
+    if service_runs(APP.translation_encs):
+        web_files.append("translation_encs.html")
+    if service_runs(APP.sentiment_en_address):
+        web_files.append("sentiment_en.html")
+    if service_runs(APP.sentiment_cs_address):
+        web_files.append("sentiment_cs.html")
+    if (service_runs(APP.resnet_address) and
+            service_runs(APP.captioning_en_address) and
+            service_runs(APP.captioning_cs_address)):
+        web_files.append("captioning.html")
+    web_files.append("web-footer.html")
+
+    content = "\n".join([get_file(f) for f in web_files])
     return flask.Response(content, mimetype="text/html")
 
 
@@ -60,7 +84,7 @@ def sentiment_en():
 
     raw_text = request.form["text"]
     tok_text = [w.lower() for w in EN_MOSES_TOKENIZER.tokenize(raw_text)]
-    request_json = {"text": [raw_text.lower().split()]}
+    request_json = {"text": tok_text}
     monkey_response = requests.post(
         "http://" + APP.sentiment_en_address + "/run",
         json=request_json, headers=JSON_HEADER)
@@ -96,7 +120,7 @@ def sentiment_cs():
 
     # TODO regex pre-processing
 
-    request_json = {"text": [raw_text.lower().split()]}
+    request_json = {"text": tok_text}
     monkey_response = requests.post(
         "http://" + APP.sentiment_cs_address + "/run",
         json=request_json, headers=JSON_HEADER)
@@ -164,7 +188,7 @@ def captioning():
         return response
 
     resnet_fetures = resnet_monkey_response.json()[
-        "resnet_features"][0]['imagenet/StopGradient:0']
+        "resnet_features"][0]
 
     captioning_request_json = {"images": [resnet_fetures]}
     captioning_monkey_response = requests.post(
@@ -188,7 +212,7 @@ def captioning():
 
 
 @APP.route('/translation_encs', methods=['POST'])
-def sentiment_en():
+def translation_encs():
     if APP.translation_encs is None:
         response = flask.Response(
             "English-to-Czech MT was not registered.",
@@ -197,11 +221,12 @@ def sentiment_en():
         return response
 
     raw_text = request.form["text"]
-    tok_text = [w.lower() for w in EN_MOSES_TOKENIZER.tokenize(raw_text)]
 
-    request_json = {"text": [raw_text.lower().split()]}
+    # TODO find out what to do with pre-processing !!!
+
+    request_json = {"source_wp": [raw_text.lower().split()]}
     monkey_response = requests.post(
-        "http://" + APP.sentiment_en_address + "/run",
+        "http://" + APP.translation_encs + "/run",
         json=request_json, headers=JSON_HEADER)
 
     if monkey_response.status_code != 200:
@@ -211,10 +236,9 @@ def sentiment_en():
         response.status_code = 500
         return response
 
-    # TODO retrieve translation instead of score
-    stars = int(monkey_response.json()["score"][0][0])
+    target = monkey_response.json()["target"][0][0]
 
-    json_response = json.dumps({"stars": stars})
+    json_response = json.dumps({"target": target})
     response = flask.Response(json_response,
                               content_type='application/json; charset=utf-8')
     response.headers.add('content-length', len(json_response.encode('utf-8')))
@@ -245,15 +269,15 @@ if __name__ == '__main__':
         "--captioning-cs", help="Service with Czech image captioning.",
         type=str, default=None)
     parser.add_argument(
-        "--translation-encs", help="Service with English-to-Czech MT.",
-        type=str, default=None)
+        "--translation-encs", help="Service with English-to-Czech MT.", type=str, default=None)
     args = parser.parse_args()
 
+    APP.translation_encs = args.translation_encs
     APP.sentiment_en_address = args.sentiment_en
     APP.sentiment_cs_address = args.sentiment_cs
     APP.resnet_address = args.resnet
     APP.captioning_en_address = args.captioning_en
     APP.captioning_cs_address = args.captioning_cs
-    APP.translation_encs = args.translation_encs
+
 
     APP.run(debug=True, host=args.host, port=args.port)
