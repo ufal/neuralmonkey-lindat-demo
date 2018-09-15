@@ -11,10 +11,7 @@ from flask import request
 import numpy as np
 from skimage.transform import resize
 
-import nltk
-nltk.download('perluniprops')
-nltk.download('nonbreaking_prefixes')
-from nltk.tokenize.moses import MosesTokenizer
+from mosestokenizer import MosesTokenizer, MosesPunctuationNormalizer
 
 JSON_HEADER = {'Content-type': 'application/json'}
 
@@ -24,11 +21,8 @@ APP.sentiment_cs_address = None
 
 EN_MOSES_TOKENIZER = MosesTokenizer("en")
 CS_MOSES_TOKENIZER = MosesTokenizer("cs")
-
-
-@APP.route('/')
-def index():
-    return "{}\n"
+EN_MOSES_PUNCT_NORM = MosesPunctuationNormalizer("en")
+CS_MOSES_PUNCT_NORM = MosesPunctuationNormalizer("cs")
 
 
 def root_dir():  # pragma: no cover
@@ -54,7 +48,7 @@ def service_runs(address):
         return False
 
 
-@APP.route('/web', methods=['GET'])
+@APP.route('/', methods=['GET'])
 def show_web():
     web_files = ["web-header.html"]
     if service_runs(APP.translation_encs):
@@ -83,7 +77,8 @@ def sentiment_en():
         return response
 
     raw_text = request.form["text"]
-    tok_text = [w.lower() for w in EN_MOSES_TOKENIZER.tokenize(raw_text)]
+    norm_text = EN_MOSES_PUNCT_NORM(raw_text)
+    tok_text = [w.lower() for w in EN_MOSES_TOKENIZER(norm_text)]
     request_json = {"text": tok_text}
     monkey_response = requests.post(
         "http://" + APP.sentiment_en_address + "/run",
@@ -116,7 +111,8 @@ def sentiment_cs():
         return response
 
     raw_text = request.form["text"]
-    tok_text = [w.lower() for w in EN_MOSES_TOKENIZER.tokenize(raw_text)]
+    norm_text = CS_MOSES_PUNCT_NORM(raw_text)
+    tok_text = [w.lower() for w in CS_MOSES_TOKENIZER(norm_text)]
 
     # TODO regex pre-processing
 
