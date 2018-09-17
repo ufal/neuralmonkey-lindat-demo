@@ -1,17 +1,22 @@
-        <div class="boxTitle" data-toggle="collapse" data-target="#sentimentEnBox">
-            Sentiment Analysis in English
-        </div>
+ <div class="boxTitle" data-toggle="collapse" data-target="#sentimentEnBox">
+     Sentiment Analysis in English
+ </div>
 
-        <div class="boxContent collapse" id="sentimentEnBox">
-            <fieldset style="background:#EEE;padding:10px">
-                <textarea style="margin-bottom: 30px; width:100%;height: 150px;" id="sentimentEnText" placeholder="Write you review..."></textarea>
+ <div class="boxContent collapse" id="sentimentEnBox">
+     <fieldset style="background:#EEE;padding:10px">
+         <textarea style="margin-bottom: 30px; width:100%;height: 150px;" id="sentimentEnText" placeholder="Write you review..."></textarea>
 
-                <input type="button" class="btn btn-primary" id="sentimentEnSubmit" value="Evaluate sentiment" />
-            </fieldset>
+         <input type="button" class="btn btn-primary" id="sentimentEnSubmit" value="Evaluate sentiment" />
+     </fieldset>
 
-            <div id="sentimentEnResultBox" style="background:#ffffe0;padding:10px;margin:3px;text-align:center">
-                <span id="sentimentEnResult" style="font-size:30pt;color:DarkOrange">☆☆☆☆☆</span>
-            </div>
+     <div id="sentimentEnResultBox" style="background:#ffffe0;padding:10px;margin:3px;text-align:center">
+         <span id="sentimentEnResult" style="font-size:30pt;color:DarkOrange">☆☆☆☆☆</span>
+     </div>
 
-            <p>The sentiment analysis model was trained on the Yelp dataset (restaurant reviews).</p>
-       </div>
+     <p>The sentiment analysis model was trained on the <a
+	     href="https://www.yelp.com/dataset/challenge">Yelp dataset.</a>
+     (restaurant reviews). Based on the restaurant review text, the model
+     estimate the number of start that would a Yelp user give to the
+     restaurant.</p>
+
+</div>
