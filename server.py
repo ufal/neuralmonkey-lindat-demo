@@ -4,6 +4,8 @@ import argparse
 import json
 import os
 import requests
+import unicodedata
+import sys
 
 import flask
 from flask import Flask
@@ -11,7 +13,9 @@ from flask import request
 import numpy as np
 from skimage.transform import resize
 
-from mosestokenizer import MosesTokenizer, MosesPunctuationNormalizer
+from mosestokenizer import (
+        MosesTokenizer, MosesPunctuationNormalizer, MosesSentenceSplitter,
+        MosesDetokenizer)
 
 JSON_HEADER = {'Content-type': 'application/json'}
 
@@ -23,6 +27,14 @@ EN_MOSES_TOKENIZER = MosesTokenizer("en")
 CS_MOSES_TOKENIZER = MosesTokenizer("cs")
 EN_MOSES_PUNCT_NORM = MosesPunctuationNormalizer("en")
 CS_MOSES_PUNCT_NORM = MosesPunctuationNormalizer("cs")
+EN_MOSES_SENT_SPLITTER = MosesSentenceSplitter("en")
+EN_MOSES_DETOKENIZER = MosesDetokenizer("en")
+CS_MOSES_DETOKENIZER = MosesDetokenizer("cs")
+
+ALPHANUMERIC_CHARSET = set(
+    chr(i) for i in range(sys.maxunicode)
+    if (unicodedata.category(chr(i)).startswith("L")
+        or unicodedata.category(chr(i)).startswith("N")))
 
 
 def root_dir():  # pragma: no cover
@@ -198,13 +210,42 @@ def captioning():
         response.status_code = 500
         return response
 
-    output_text = " ".join(captioning_monkey_response.json()["target"][0])
+    if lng == "cs":
+        output_text = CS_MOSES_DETOKENIZER(
+            captioning_monkey_response.json()["target"][0])
+    else:
+        output_text = EN_MOSES_DETOKENIZER(
+            captioning_monkey_response.json()["target"][0])
     json_response = json.dumps({"caption": output_text})
     response = flask.Response(json_response,
                               content_type='application/json; charset=utf-8')
     response.headers.add('content-length', len(json_response.encode('utf-8')))
     response.status_code = 200
     return response
+
+
+def t2t_tokenize(text):
+
+    tokens = []
+    is_alnum = [ch in ALPHANUMERIC_CHARSET for ch in text]
+    current_token_start = 0
+
+    for pos in range(1, len(text)):
+        # Boundary of alnum and non-alnum character groups
+        if is_alnum[pos] != is_alnum[pos - 1]:
+            token = text[current_token_start:pos]
+
+            # Drop single space if it's not on the beginning
+            if token != " " or current_token_start == 0:
+                tokens.append(token)
+
+            current_token_start = pos
+
+    # Add a final token (even if it's a single space)
+    final_token = text[current_token_start:]
+    tokens.append(final_token)
+
+    return tokens
 
 
 @APP.route('/translation_encs', methods=['POST'])
@@ -217,10 +258,9 @@ def translation_encs():
         return response
 
     raw_text = request.form["text"]
+    sentences = EN_MOSES_SENT_SPLITTER([raw_text])
 
-    # TODO find out what to do with pre-processing !!!
-
-    request_json = {"source_wp": [raw_text.lower().split()]}
+    request_json = {"source": [t2t_tokenize(s) for s in sentences]}
     monkey_response = requests.post(
         "http://" + APP.translation_encs + "/run",
         json=request_json, headers=JSON_HEADER)
@@ -232,7 +272,8 @@ def translation_encs():
         response.status_code = 500
         return response
 
-    target = monkey_response.json()["target"][0][0]
+    target = "\n".join([
+        EN_MOSES_DETOKENIZER(sent) for sent in monkey_response.json()["target"]])
 
     json_response = json.dumps({"target": target})
     response = flask.Response(json_response,
