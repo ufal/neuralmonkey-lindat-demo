@@ -88,7 +88,7 @@ def sentiment_en():
         response.status_code = 503
         return response
 
-    raw_text = request.form["text"]
+    raw_text = request.form["text"].replace("\n", " ")
     norm_text = EN_MOSES_PUNCT_NORM(raw_text)
     tok_text = [w.lower() for w in EN_MOSES_TOKENIZER(norm_text)]
     request_json = {"text": tok_text}
@@ -122,7 +122,7 @@ def sentiment_cs():
         response.status_code = 503
         return response
 
-    raw_text = request.form["text"]
+    raw_text = request.form["text"].replace("\n", " ")
     norm_text = CS_MOSES_PUNCT_NORM(raw_text)
     tok_text = [w.lower() for w in CS_MOSES_TOKENIZER(norm_text)]
 
@@ -316,5 +316,4 @@ if __name__ == '__main__':
     APP.captioning_en_address = args.captioning_en
     APP.captioning_cs_address = args.captioning_cs
 
-
-    APP.run(debug=True, host=args.host, port=args.port)
+    APP.run(debug=False, host=args.host, port=args.port)
